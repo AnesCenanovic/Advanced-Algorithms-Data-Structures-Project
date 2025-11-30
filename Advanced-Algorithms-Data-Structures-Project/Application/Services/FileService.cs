@@ -2,9 +2,15 @@
 {
     public class FileService : IFileService
     {
-        public string ReadFile(string path) => File.ReadAllText(path);
+        public byte[] ReadBytes(string path)
+            {
+            if (!File.Exists(path))
+                throw new FileNotFoundException("File not found: {$path}");
+            return File.ReadAllBytes(path);
+            }
 
-        public void WriteFile(string path, string content) =>
-            File.WriteAllText(path, content);
+
+        public void WriteBytes(string path, byte[] data) =>
+            File.WriteAllBytes(path, data);
     }
 }

@@ -4,9 +4,8 @@ namespace Application.Compression
 {
     public class Lz77Result
     {
-        public List<Token> Tokens { get; } = new();
+        public byte[] CompressedData { get; set; } = Array.Empty<byte>();
 
-        public string CompressedText =>
-            string.Join(" ", Tokens.Select(t => $"({t.Offset},{t.Length},'{t.NextChar}')"));
+        public int TokenCount { get; set; }
     }
 }

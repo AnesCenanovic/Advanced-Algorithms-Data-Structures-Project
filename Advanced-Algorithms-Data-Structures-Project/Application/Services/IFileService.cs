@@ -2,7 +2,7 @@
 {
     public interface IFileService
     {
-        public string ReadFile(string path);
-        public void WriteFile(string path, string content);
+        public byte[] ReadBytes(string path);
+        public void WriteBytes(string path, byte[] data);
     }
 }

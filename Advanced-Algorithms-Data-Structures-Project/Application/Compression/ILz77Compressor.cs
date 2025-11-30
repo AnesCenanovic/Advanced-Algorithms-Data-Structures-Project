@@ -2,6 +2,6 @@
 {
     public interface ILz77Compressor
     {
-        public Lz77Result Compress(string input, int windowSize, int lookaheadSize);
+        public Lz77Result Compress(byte[] input, int windowSize, int lookaheadSize);
     }
 }
