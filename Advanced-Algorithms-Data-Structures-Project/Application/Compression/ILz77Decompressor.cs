@@ -1,6 +1,4 @@
-﻿using Application.Models;
-
-namespace Application.Compression
+﻿namespace Application.Compression
 {
     public interface ILz77Decompressor
     {

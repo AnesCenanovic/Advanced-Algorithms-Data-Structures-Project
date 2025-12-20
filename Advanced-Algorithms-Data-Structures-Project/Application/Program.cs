@@ -9,18 +9,20 @@ ILz77Decompressor decompressor = new Lz77Decompressor();
 while (true)
 {
     Console.Clear();
-    Console.WriteLine("=== Binary LZ77 Compressor (Basic Linear Search) ===");
-    Console.WriteLine("1. Compress File");
-    Console.WriteLine("2. Decompress File");
-    Console.WriteLine("3. Exit");
+    Console.WriteLine("=== Binary LZ77 Compressor ===");
+    Console.WriteLine("1. Compress File (Linear Search)");
+    Console.WriteLine("2. Compress File (Hash Verification - LZHV)");
+    Console.WriteLine("3. Decompress File");
+    Console.WriteLine("4. Exit");
     Console.Write("Select: ");
 
     var choice = Console.ReadLine();
 
     try
     {
-        if (choice == "1")
+        if (choice == "1" || choice == "2")
         {
+            bool useHash = choice == "2";
             Console.Write("Enter file path: ");
             string inputPath = Console.ReadLine() ?? "";
 
@@ -30,11 +32,15 @@ while (true)
             Console.WriteLine($"Original Size: {inputData.Length} bytes");
 
             // 2. Compress (Measure Time)
-            Console.WriteLine("Compressing (this may take a moment)...");
+            Console.WriteLine(useHash
+                ? "Compressing with Hash Verification (LZHV)..."
+                : "Compressing with Linear Search...");
             Stopwatch sw = Stopwatch.StartNew();
 
             // Window: 4096 (4KB), Lookahead: 255
-            var result = compressor.Compress(inputData, 4096, 255);
+            var result = useHash
+                ? compressor.CompressWithHashVerification(inputData, 4096, 255)
+                : compressor.Compress(inputData, 4096, 255);
 
             sw.Stop();
 
@@ -49,6 +55,7 @@ while (true)
             double saved = 100 - ratio;
 
             Console.WriteLine("\n=== Results ===");
+            Console.WriteLine($"Method:          {(useHash ? "LZHV (Hash-based)" : "Linear Search")}");
             Console.WriteLine($"Time Taken:      {sw.Elapsed.TotalMilliseconds:F2} ms");
             Console.WriteLine($"Compressed Size: {compressedBytes} bytes");
             Console.WriteLine($"Tokens Created:  {result.TokenCount}");
@@ -67,7 +74,7 @@ while (true)
             string fullPath = Path.GetFullPath(outputPath);
             Console.WriteLine($"Saved to: {fullPath}");
         }
-        else if (choice == "2")
+        else if (choice == "3")
         {
             Console.Write("Enter .lz77 file path: ");
             string inputPath = Console.ReadLine() ?? "";
@@ -90,7 +97,7 @@ while (true)
             Console.WriteLine($"Restored Size:   {restoredData.Length} bytes");
             Console.WriteLine($"Saved to:        {outputPath}");
         }
-        else if (choice == "3")
+        else if (choice == "4")
         {
             break;
         }
