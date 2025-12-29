@@ -1,5 +1,4 @@
-@ -1,112 +1,418 @@
-﻿using Application.Compression;
+using Application.Compression;
 using Application.Services;
 using System.Diagnostics;
 using System.Text;
@@ -13,9 +12,7 @@ const string RESULTS_JSON = @".\results\compression_results.json";
 
 IFileService fileService = new FileService();
 ILz77Compressor compressor = new Lz77Compressor();
-ILz77Decompressor decompressor = new Lz77Decompressor();
 
-while (true)
 // Create directories
 Directory.CreateDirectory(TRIAL_FILES_DIR);
 Directory.CreateDirectory(RESULTS_DIR);
@@ -33,13 +30,6 @@ var choice = Console.ReadLine();
 
 switch (choice)
 {
-    Console.Clear();
-    Console.WriteLine("=== Binary LZ77 Compressor ===");
-    Console.WriteLine("1. Compress File (Linear Search)");
-    Console.WriteLine("2. Compress File (Hash Verification - LZHV)");
-    Console.WriteLine("3. Decompress File");
-    Console.WriteLine("4. Exit");
-    Console.Write("Select: ");
     case "1":
         GenerateTrialFiles();
         break;
@@ -61,11 +51,9 @@ switch (choice)
         return;
 }
 
-    var choice = Console.ReadLine();
 Console.WriteLine("\nPress any key to exit...");
 Console.ReadKey();
 
-    try
 // ========================================
 // TRIAL FILE GENERATION
 // ========================================
@@ -75,61 +63,6 @@ void GenerateTrialFiles()
 
     var testCases = new[]
     {
-        if (choice == "1" || choice == "2")
-        {
-            bool useHash = choice == "2";
-            Console.Write("Enter file path: ");
-            string inputPath = Console.ReadLine() ?? "";
-
-            // 1. Read
-            Console.WriteLine("Reading file...");
-            byte[] inputData = fileService.ReadBytes(inputPath);
-            Console.WriteLine($"Original Size: {inputData.Length} bytes");
-
-            // 2. Compress (Measure Time)
-            Console.WriteLine(useHash
-                ? "Compressing with Hash Verification (LZHV)..."
-                : "Compressing with Linear Search...");
-            Stopwatch sw = Stopwatch.StartNew();
-
-            // Window: 4096 (4KB), Lookahead: 255
-            var result = useHash
-                ? compressor.CompressWithHashVerification(inputData, 4096, 255)
-                : compressor.Compress(inputData, 4096, 255);
-
-            sw.Stop();
-
-            // 3. Write
-            string outputPath = inputPath + ".lz77";
-            fileService.WriteBytes(outputPath, result.CompressedData);
-
-            // 4. Report Stats
-            long originalBytes = inputData.Length;
-            long compressedBytes = result.CompressedData.Length;
-            double ratio = ((double)compressedBytes / originalBytes) * 100;
-            double saved = 100 - ratio;
-
-            Console.WriteLine("\n=== Results ===");
-            Console.WriteLine($"Method:          {(useHash ? "LZHV (Hash-based)" : "Linear Search")}");
-            Console.WriteLine($"Time Taken:      {sw.Elapsed.TotalMilliseconds:F2} ms");
-            Console.WriteLine($"Compressed Size: {compressedBytes} bytes");
-            Console.WriteLine($"Tokens Created:  {result.TokenCount}");
-
-            if (compressedBytes < originalBytes)
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"Success! Reduced size to {ratio:F2}% (Saved {saved:F2}%)");
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"File grew larger ({ratio:F2}%). (Normal for small or random files)");
-            }
-            Console.ResetColor();
-            string fullPath = Path.GetFullPath(outputPath);
-            Console.WriteLine($"Saved to: {fullPath}");
-        }
-        else if (choice == "3")
         // Small files to show overhead
         ("tiny_10b.txt", GenerateRandomText(10), "10 bytes - random"),
         ("tiny_50b.txt", GenerateRandomText(50), "50 bytes - random"),
@@ -251,33 +184,25 @@ void RunCompressionTests(string directory, string datasetName)
     {
         try
         {
-            Console.Write("Enter .lz77 file path: ");
-            string inputPath = Console.ReadLine() ?? "";
             processed++;
             Console.WriteLine($"[{processed}/{files.Length}] Processing: {Path.GetFileName(filePath)}");
 
             byte[] inputData = fileService.ReadBytes(filePath);
             long originalSize = inputData.Length;
 
-            Console.WriteLine("Reading...");
-            byte[] compressedData = fileService.ReadBytes(inputPath);
             // Test Linear Search
             var swLinear = Stopwatch.StartNew();
             var resultLinear = compressor.Compress(inputData, 4096, 255);
             swLinear.Stop();
 
-            Console.WriteLine("Decompressing...");
-            Stopwatch sw = Stopwatch.StartNew();
             // Test Hash Verification
             var swHash = Stopwatch.StartNew();
             var resultHash = compressor.CompressWithHashVerification(inputData, 4096, 255);
             swHash.Stop();
 
-            byte[] restoredData = decompressor.Decompress(compressedData);
             // Calculate repetition score (simple heuristic)
             double repetitionScore = CalculateRepetitionScore(inputData);
 
-            sw.Stop();
             var result = new CompressionResult
             {
                 FileName = Path.GetFileName(filePath),
@@ -292,28 +217,19 @@ void RunCompressionTests(string directory, string datasetName)
                 RepetitionScore = repetitionScore
             };
 
-            string outputPath = inputPath.Replace(".lz77", "") + "_decoded.txt";
-            fileService.WriteBytes(outputPath, restoredData);
             results.Add(result);
 
-            Console.WriteLine("\n=== Results ===");
-            Console.WriteLine($"Time Taken:      {sw.Elapsed.TotalMilliseconds:F2} ms");
-            Console.WriteLine($"Restored Size:   {restoredData.Length} bytes");
-            Console.WriteLine($"Saved to:        {outputPath}");
             Console.WriteLine($"  Original: {FormatBytes(originalSize)}");
             Console.WriteLine($"  Linear:   {FormatBytes(result.LinearCompressedSize)} ({result.LinearCompressionRatio:F2}%) in {result.LinearTimeMs:F2}ms");
             Console.WriteLine($"  Hash:     {FormatBytes(result.HashCompressedSize)} ({result.HashCompressionRatio:F2}%) in {result.HashTimeMs:F2}ms");
             Console.WriteLine($"  Speedup:  {result.SpeedupFactor:F2}x faster with hash");
             Console.WriteLine();
         }
-        else if (choice == "4")
         catch (Exception ex)
         {
-            break;
             Console.WriteLine($"  ERROR: {ex.Message}\n");
         }
     }
-    catch (Exception ex)
 
     // Save results
     SaveResults(results, datasetName);
@@ -397,13 +313,10 @@ void AnalyzeResults()
     var repetitionGroups = allResults.GroupBy(r => GetRepetitionCategory(r.RepetitionScore));
     foreach (var group in repetitionGroups.OrderBy(g => g.Key))
     {
-        Console.WriteLine($"Error: {ex.Message}");
         var avgRatio = group.Average(r => r.LinearCompressionRatio);
         Console.WriteLine($"{group.Key,-20} Avg Ratio: {avgRatio:F2}%");
     }
 
-    Console.WriteLine("\nPress any key...");
-    Console.ReadKey();
     // Analysis 3: Hash vs Linear performance
     Console.WriteLine("\n=== Hash Verification Performance ===");
     var avgSpeedup = allResults.Average(r => r.SpeedupFactor);
